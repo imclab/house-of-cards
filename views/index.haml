@@ -1,0 +1,18 @@
+#main_container
+  #background
+  #header
+    %h1.tooltip
+      %a= c("metadata.title")
+    %h2= c("metadata.description")
+    #snapshot
+      %img{:src => "/images/snapshot.jpg"}
+  %form#converter{:action => "/house-of-cards", :method => :get}
+    .text_field
+      %input#url{:name => :url, :type => "text"}/
+    %input{:type => :submit, :class => :button}
+  #footer
+    %a.name{:href => c("links.website")} Viatropos @ 4D
+  /[if IE]
+    #ie_warning
+      :textile
+        #{c("snippets.ie_warning")}

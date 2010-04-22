@@ -1,0 +1,29 @@
+/* so gravity is bound to a box */
+body, html {
+	overflow: hidden !important;
+	width:100% !important;
+	height:100% !important;
+	margin: 0px !important;
+	padding: 0px !important;
+}
+
+.box2d {
+	z-index: 100 !important;
+}
+
+.fixed_in_space {
+	position:fixed;
+}
+
+.invisible_body {
+	opacity:0;
+	z-index:-10;
+}
+
+#canvas {
+	position:fixed;
+	z-index:5;
+	width:100%;
+	height:100%;
+	padding:20px;
+}
