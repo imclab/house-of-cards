@@ -88,7 +88,7 @@ get "/house-of-cards" do
     
     # change the title so they know this isn't the actual site
     title = html.xpath("//title").first
-    title.content = title.text + "As a House of Cards | "
+    title.content = "As a House of Cards | #{title.text}"
     
     head = html.xpath("//head").first
     first_head_node = head.children.first
