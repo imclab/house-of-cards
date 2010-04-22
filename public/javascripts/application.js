@@ -58,7 +58,22 @@ function ready_to_go() {
 			"list-style-image",
 			"list-style-position",
 			"list-style-type",
-			"text-align"
+			"text-align", 
+			'visibility', 
+			'z-index', 
+			'overflow-x', 
+			'overflow-y', 
+			'white-space', 
+			'clip', 
+			'cursor', 
+			'marker-offset', 
+			'background-repeat', 
+			'text-transform', 
+			'text-decoration', 
+			'letter-spacing', 
+			'word-spacing', 
+			'line-height',
+			'direction'
 		]
 
 
@@ -70,7 +85,10 @@ function ready_to_go() {
 			node = jQuery(element, document);
 			properties = {};
 			styles = {};
-			var offset = node.position(); // relative to document
+			var offset = node.offset(document); // relative to document
+			if (offset.left == null) {
+				offset = node.position();
+			}
 			properties["x"] = offset.left.toString() + "px";
 			properties["y"] = offset.top.toString() + "px";
 			properties["width"] = node.width().toString() + "px";
@@ -82,9 +100,11 @@ function ready_to_go() {
 					styles[style_names[i]] = css_value;
 				}
 			}
-			styles["position"] = "fixed";
+			styles["position"] = "absolute";
 			styles["float"] = "none";
 			styles["clear"] = "both";
+			styles["overflow"] = "none";
+			styles["display"] = "inline";
 
 			properties["styles"] = styles;
 			// copy it
@@ -100,11 +120,19 @@ function ready_to_go() {
 			copy.addClass("invisible_body");
 			node.after(copy);
 			
+//			for (var i = 0; i < style_names.length; i++) {
+//				node.css(style_names[i], styles[style_names[i]]);
+//			}
+			
+//			node.insertBefore("#canvas");
+			
 			node.width(properties["width"]);
 			node.height(properties["height"]);
 			node.css("left", properties["x"]);
 			node.css("top", properties["y"]);
 		});
+		
+//		alert(clazzes.join("\n"))
 		
 		// do something for firefox
 		if (typeof render_house_of_cards == "undefined") {
@@ -117,8 +145,7 @@ function ready_to_go() {
 		} else {
 			render_house_of_cards();
 		}
-		
-		jQuery("input textarea").click(function() {
+		jQuery("input, textarea").click(function() {
 			jQuery(this).focus();
 		});
 }

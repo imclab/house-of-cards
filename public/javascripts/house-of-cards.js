@@ -66,7 +66,6 @@ function init()
 		properties[i][2] = element.offsetWidth;
 		properties[i][3] = element.offsetHeight;
 	}
-
 	for (i = 0; i < elements.length; i++)
 	{
 		var element = elements[i];
@@ -200,6 +199,7 @@ function createBox(world, x, y, width, height, fixed, element)
 {
 	if (typeof(fixed) == 'undefined') fixed = true;
 	var boxSd = new b2BoxDef();
+	
 	if (!fixed) boxSd.density = 1.0;
 	boxSd.extents.Set(width, height);
 	var boxBd = new b2BodyDef();

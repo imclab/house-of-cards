@@ -11,6 +11,11 @@ set :views, "views"
 VALID_TAGS = %w(p a img input cite h1 h2 h3 h4 h5 h6 li hr code span div)
 DEFAULT_TAGS = %w(p a img input h1 h2 h3 h4 h5 h6 li code)
 
+def pretty_print_html(xml)
+  pretty_printer = IO.read(File.join(File.dirname(__FILE__), "pretty_print.xsl"))
+  Nokogiri::XSLT(pretty_printer).transform(xml).children.to_html.gsub(/\t/, "")
+end
+
 def capture_url
   session[:house_of_cards_url]
 end
@@ -49,6 +54,32 @@ get "/house-of-cards" do
   begin
     page = open(capture_url)
     html = Nokogiri::HTML(page)
+    
+    # add box2d classes
+    nesting = tags.include?("li") and (tags.include?("img") || tags.include?("a"))
+    
+    tags.each do |tag|
+      html.xpath("//#{tag}").each do |node|
+        if nesting and tag =~ /^(img|a)$/
+          matches = node.path.to_s.split("/").select {|part| part =~ /^li/ }
+          if matches and !matches.empty?
+            next
+          end
+        end
+        clazz = node["class"] || ""
+        clazz << " box2d"
+        node["class"] = clazz.squeeze(" ").strip
+      end
+    end
+    
+    # duplicate
+#    html.xpath("//*[@class='box2d']").each do |box2d|
+#      duplicate = box2d.clone
+#      clazz = duplicate["class"] + " hidden_box2d_element"
+#      box2d.add_next_sibling(duplicate)
+#      duplicate["class"] = clazz
+#    end
+    
     # make all links absolute
     html.xpath("//img").each do |image|
       image["src"] = correct_path(image["src"])
@@ -67,23 +98,6 @@ get "/house-of-cards" do
     end
     html.xpath("//link").each do |style|
       style["href"] = correct_path(style["href"])
-    end
-    
-    # add box2d classes
-    nesting = tags.include?("li") and (tags.include?("img") || tags.include?("a"))
-    
-    tags.each do |tag|
-      html.xpath("//#{tag}").each do |node|
-        if nesting and tag =~ /^(img|a)$/
-          matches = node.path.to_s.split("/").select {|part| part =~ /^li/ }
-          if matches and !matches.empty?
-            next
-          end
-        end
-        clazz = node["class"] || ""
-        clazz << " box2d"
-        node["class"] = clazz.squeeze(" ").strip
-      end
     end
     
     # change the title so they know this isn't the actual site
@@ -114,8 +128,8 @@ get "/house-of-cards" do
       script["type"] = "text/javascript"
       body.add_child(script)
     end
-    
-    html.to_html
+
+    pretty_print_html(html)#.to_html
   rescue Exception => e
     puts "ERROR: #{e.backtrace.join("\n")}"
     haml :index
@@ -128,9 +142,7 @@ end
     path = params[:splat].nil? ? '' : "#{params[:splat].first}/"
     path << params[:page]
     path = correct_path(path)
-    puts "RESULT: #{path}"
     ext = File.extname(path).downcase.split(".").last
-    puts "EXT: #{ext}"
     case ext
       when "jpg", "jpeg"
         content_type "image/jpeg"
