@@ -1,13 +1,14 @@
+
 if (typeof jQuery == "undefined") {
 	var script = document.createElement('script');
   var url = "http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"
 	script.setAttribute('src', url);
 	script.setAttribute('type','text/javascript');
-	script.onload = function() {
-		ready_to_go();
-	};
 	var head_doc = document.getElementsByTagName('head')[0];
 	head_doc.appendChild(script);
+	window.onload = function() {
+		ready_to_go();
+	}
 } else {
 	initialize_with_jquery();
 }
@@ -20,6 +21,7 @@ function initialize_with_jquery() {
 }
 
 function ready_to_go() {	
+	
 	  // Code that uses jQuery's $ can follow here.
 
 		// cache all visible styles for box2d elements, then remove
@@ -81,18 +83,37 @@ function ready_to_go() {
 		var cache = [];
 		var totind = 0;
 		var z_index = 100;
+		
+		// order of operations:
+		// 1) copy element so they are exactly the same
+		// 2) Save styles
+		// 3) set fixed position to enable layout, so offset gives us a value
+		// 4) Save offset
 		jQuery(".box2d", document).each(function(index, element) {
+			// 0) initialize
 			node = jQuery(element, document);
 			properties = {};
 			styles = {};
-			var offset = node.offset(document); // relative to document
-			if (offset.left == null) {
-				offset = node.position();
-			}
-			properties["x"] = offset.left.toString() + "px";
-			properties["y"] = offset.top.toString() + "px";
+			
+			// 1) copy
+			var copy = node.clone();
+			
+			// remove box2d's within the context of this
+			jQuery(".box2d", copy).each(function(index, elm) {
+				jQuery(elm).removeClass("box2d");
+				jQuery(elm).removeClass("invisible_body");
+			});
+			copy.removeClass("box2d");
+			copy.addClass("invisible_body");
+			
 			properties["width"] = node.width().toString() + "px";
 			properties["height"] = node.height().toString() + "px";
+			
+			// 2) enable layout
+			node.addClass("fixed_in_space");
+			node.css("z-index", z_index++);
+			
+			// 3) copy styles
 			var css_value = null;
 			for (var i = 0; i < style_names.length; i++) {
 				css_value = node.css(style_names[i]);
@@ -105,20 +126,38 @@ function ready_to_go() {
 			styles["clear"] = "both";
 			styles["overflow"] = "none";
 			styles["display"] = "inline";
-
-			properties["styles"] = styles;
-			// copy it
-			var copy = node.clone();
-			// remove box2d's within the context of this
-			jQuery(".box2d", copy).each(function(index, element) {
-				jQuery(element).removeClass("box2d");
-			});
 			
-			node.addClass("fixed_in_space");
-			node.css("z-index", z_index++);
-			copy.removeClass("box2d");
-			copy.addClass("invisible_body");
-			node.after(copy);
+			properties["styles"] = styles;
+			node.css("float", "none");
+			node.css("clear", "both");
+			node.css("padding", "none");
+			node.css("none", "none");
+			
+			// 4) copy offset
+			var offset = node.offset(document); // relative to document
+			if (offset.left == null || offset.top == null) {
+				try {
+					offset = node.position(document);
+				}	catch (error) {
+					offset = {left:0, top:0};
+				}
+			}
+			properties["x"] = offset.left.toString() + "px";
+			properties["y"] = offset.top.toString() + "px";
+			
+			node.find("*").each(function(inde, elemt) {
+				je = jQuery(elemt);
+				var idn = je.attr("id");
+				if (idn && idn != "") {
+					idn = idn + "_box2d";
+					je.attr("id", idn);
+				}
+			});
+			idn = node.attr("id")
+			if (idn && idn != "")
+				node.attr("id", idn + "_box2d");
+			
+			node.before(copy);
 			
 //			for (var i = 0; i < style_names.length; i++) {
 //				node.css(style_names[i], styles[style_names[i]]);
@@ -130,7 +169,15 @@ function ready_to_go() {
 			node.height(properties["height"]);
 			node.css("left", properties["x"]);
 			node.css("top", properties["y"]);
+			clazzes.push(properties["x"]);
 		});
+		
+		jQuery(".invisible_body", document).each(function(index, element) {
+			node = jQuery(element);
+			if (node.hasClass("box2dify")) {
+				alert("!!");
+			}
+		})
 		
 //		alert(clazzes.join("\n"))
 		

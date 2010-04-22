@@ -8,15 +8,18 @@ body, html {
 }
 
 .box2d {
-	z-index: 100 !important;
+	z-index: 100;
 }
 
 .fixed_in_space {
 	position:fixed !important;
+	overflow:visible !important;
+	z-index:10;
+	display:inline;
 }
 
 .invisible_body {
-	opacity:0;
+	opacity:0.3;
 	z-index:-10;
 }
 

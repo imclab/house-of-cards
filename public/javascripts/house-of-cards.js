@@ -69,7 +69,7 @@ function init()
 	for (i = 0; i < elements.length; i++)
 	{
 		var element = elements[i];
-		element.style['position'] = 'absolute';
+//		element.style['position'] = 'fixed';
 		element.style['left'] = properties[i][0] + 'px';
 		element.style['top'] = properties[i][1] + 'px';
 		//element.style['backgroundColor'] = '#ffff00';
@@ -321,8 +321,8 @@ function findPos(obj)
 {
 	if (obj == null)
 		return [0, 0];
-	/*
 	var curleft = curtop = 0;
+	/*
 	if (obj.offsetParent)
 	{
 		do
@@ -333,8 +333,12 @@ function findPos(obj)
 		while (obj = obj.offsetParent);
 	}
 	*/
-	curleft = parseFloat(obj.style.left.match(/(\d+)px/)[1]);
-	curtop = parseFloat(obj.style.top.match(/(\d+)px/)[1]);
+	try {
+		curleft = parseFloat(obj.style.left.match(/(\d+)px/)[1]);
+		curtop = parseFloat(obj.style.top.match(/(\d+)px/)[1]);
+	} catch (error) {
+		curleft = curtop = 0;
+	}
 	return [curleft, curtop];
 }
 

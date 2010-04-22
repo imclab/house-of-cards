@@ -8,8 +8,8 @@ enable :sessions
 set :public, "public"
 set :views, "views"
 
-VALID_TAGS = %w(p a img input cite h1 h2 h3 h4 h5 h6 li hr code span div)
-DEFAULT_TAGS = %w(p a img input h1 h2 h3 h4 h5 h6 li code)
+VALID_TAGS = %w(p a img input cite h1 h2 h3 h4 h5 h6 li hr code span div label legend ul ol)
+DEFAULT_TAGS = %w(p a img input h1 h2 h3 h4 h5 h6 li code label legend)
 
 def pretty_print_html(xml)
   pretty_printer = IO.read(File.join(File.dirname(__FILE__), "pretty_print.xsl"))
@@ -40,12 +40,21 @@ def correct_path(path)
   path
 end
 
+def add_class(node, name)
+  clazz = node["class"]
+  clazz ||= ""
+  clazz << " #{name}"
+  node["class"] = clazz.squeeze(" ").strip
+  node
+end
+
 get "/" do
   haml :index
 end
 
 get "/house-of-cards" do
   url = params["url"]
+  perfect = params["perfect"] ? true : false
   return unless url =~ /^http/
   tags = valid_tags(params["tags"] ? params["tags"].split(",") : nil)
   return unless url
@@ -56,19 +65,125 @@ get "/house-of-cards" do
     html = Nokogiri::HTML(page)
     
     # add box2d classes
-    nesting = tags.include?("li") and (tags.include?("img") || tags.include?("a"))
+    # to get the maximum effect, it should only add the box2d class
+    # to leaf nodes, or what are the most visually pleasing leaf nodes:
+    # DEFAULT_TAGS
+    # li > a = li
+    # li > a > img = li
+    # li > ul > li > a = second li
+    # li > h = li
+    # p
+    # p > a = p
+    # * > span = *
+    # input
+    nesting_li = tags.include?("li") and (tags.include?("img") || tags.include?("a"))
+    nesting_a = tags.include?("a") and tags.include?("img")
     
-    tags.each do |tag|
-      html.xpath("//#{tag}").each do |node|
-        if nesting and tag =~ /^(img|a)$/
-          matches = node.path.to_s.split("/").select {|part| part =~ /^li/ }
-          if matches and !matches.empty?
-            next
+    if perfect
+      paths = []
+      html.xpath("//*").each do |node|
+        paths << node.path
+      end
+      paths.sort.uniq!
+    
+      # remove unnecessary paths
+      paths.delete_if do |path|
+        deletable = true
+        DEFAULT_TAGS.each do |tag|
+          if path =~ /\/#{tag}/
+            deletable = false
           end
         end
-        clazz = node["class"] || ""
-        clazz << " box2d"
-        node["class"] = clazz.squeeze(" ").strip
+        deletable
+      end
+    
+      # now cut the paths down to leafs (li, a, img, p, h)
+    
+      # do lists first
+      lists_paths = []
+      paths.delete_if do |path|
+        deletable = false
+        if path =~ /link/
+          deletable = true
+        elsif path =~ /\/li(\[\d*\])?/
+          length = $1 ? $1.to_s.length : 1
+          index = (path.rindex("/li") + length + 2).to_i
+          path = path[0..index]
+          lists_paths << path
+          deletable = true
+        end
+        deletable
+      end
+    
+      lists_paths.uniq!
+        
+      # then headers
+      header_paths = []
+      paths.delete_if do |path|
+        deletable = false
+        puts "PATH: #{path}"
+        if path =~ /\/h(\d)(\[\d*\])?/
+          puts "MATCHED HEADER!"
+          length = $2 ? $2.to_s.length : 0
+          index = (path.rindex("/h#{$1}") + length + 2).to_i
+          path = path[0..index]
+          header_paths << path
+          deletable = true
+        end
+        deletable
+      end
+    
+      # then links
+      link_paths = []
+      paths.delete_if do |path|
+        deletable = false
+        if path =~ /\/a(\[\d*\])?/
+          length = $1 ? $1.to_s.length : 0
+          index = (path.rindex("/a") + length + 2).to_i
+          path = path[0..index]
+          lists_paths << path
+          deletable = true
+        end
+        deletable
+      end
+    
+      # then basic ones
+      other_paths = []
+      paths.delete_if do |path|
+        deletable = false
+        if path =~ /\/(p|input|img)(\[\d*\])?/
+          length = $2 ? $2.to_s.length : 0
+          index = (path.rindex("/#{$1}") + length + 2).to_i
+          path = path[0..index]
+          other_paths << path
+          deletable = true
+        end
+        deletable
+      end
+    
+      total_paths = lists_paths + header_paths + link_paths + other_paths
+    
+      total_paths.each do |path|
+        begin
+          node = html.xpath(path).first
+          puts "GOOD: #{path.to_s}"
+          add_class(node, "box2d")
+        rescue Exception => e
+          puts "ERR: #{e.inspect}"
+        end
+      end
+    else
+    
+      tags.each do |tag|
+        html.xpath("//#{tag}").each do |node|
+          if nesting_li and tag =~ /^(img|a)$/
+            matches = node.path.to_s.split("/").select {|part| part =~ /^(li|h1|h2|h3|h4|h5|h6|a)$/ }
+            if matches and !matches.empty?
+              next
+            end
+          end
+          add_class(node, "box2d")
+        end
       end
     end
     
@@ -131,7 +246,6 @@ get "/house-of-cards" do
 
     pretty_print_html(html)#.to_html
   rescue Exception => e
-    puts "ERROR: #{e.backtrace.join("\n")}"
     haml :index
   end
 end
